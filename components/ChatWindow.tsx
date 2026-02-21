@@ -590,7 +590,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
 
   if (!room) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 hidden md:flex items-center justify-center">
         <div className="text-center">
           <div className="w-20 h-20 mx-auto mb-4 glass rounded-full flex items-center justify-center">
             <Users size={40} className="text-gray-400" />
@@ -603,10 +603,10 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col w-full h-full">
       {/* Шапка чата */}
-      <div className="p-4 glass border-b border-white/10">
-        <div className="flex items-center gap-3">
+      <div className="p-3 sm:p-4 glass border-b border-white/10">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Кнопка "Назад" для мобильных */}
           {onBack && (
             <motion.button
@@ -623,10 +623,10 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             onClick={() => setShowInfoPanel(true)}
-            className="flex-1 flex items-center gap-3 text-left transition"
+            className="flex-1 flex items-center gap-2 sm:gap-3 text-left transition"
           >
           <div className="relative">
-            <div className="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 gradient-bg rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
               {room.type === 'direct' && room.partner_profile?.avatar_url ? (
                 <Image
                   src={room.partner_profile.avatar_url}
@@ -645,9 +645,9 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
                   unoptimized
                 />
               ) : room.type === 'group' ? (
-                <Users size={24} />
+                <Users size={20} className="sm:w-6 sm:h-6" />
               ) : (
-                <MessageSquare size={24} />
+                <MessageSquare size={20} className="sm:w-6 sm:h-6" />
               )}
             </div>
             {/* Индикатор онлайн для личных чатов */}
@@ -655,13 +655,13 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
               <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#0a0a0f] status-${room.partner_profile.status || 'offline'}`} />
             )}
           </div>
-          <div className="flex-1">
-            <h2 className="font-semibold text-lg">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-base sm:text-lg truncate">
               {room.type === 'direct' && room.partner_profile
                 ? room.partner_profile.username || 'Пользователь'
                 : room.name || 'Личный чат'}
             </h2>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 truncate">
               {room.type === 'direct' && room.partner_profile
                 ? room.partner_profile.status === 'online'
                   ? 'в сети'
@@ -676,7 +676,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
       </div>
 
       {/* Сообщения */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
         <AnimatePresence>
           {messages.map((message) => {
             const isOwn = message.user_id === user?.id;
@@ -709,7 +709,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
                 )}
 
                 {/* Сообщение */}
-                <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                <div className={`max-w-[85%] sm:max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                   {!isOwn && (
                     <span className="text-xs text-gray-400 mb-1 px-2">
                       {sender?.username || 'Пользователь'}
@@ -919,7 +919,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
           onCancel={() => setIsRecordingVoice(false)}
         />
       ) : (
-        <div className="p-4 glass border-t border-white/10">
+        <div className="p-3 sm:p-4 glass border-t border-white/10">
           {/* Превью выбранных файлов */}
           {selectedFiles.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -972,10 +972,10 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingFiles || selectedFiles.length >= 5}
-              className="p-3 glass-hover rounded-lg transition disabled:opacity-50"
+              className="p-2 sm:p-3 glass-hover rounded-lg transition disabled:opacity-50"
               title="Прикрепить файл"
             >
-              <Paperclip size={20} />
+              <Paperclip size={18} className="sm:w-5 sm:h-5" />
             </motion.button>
             
             <input
@@ -986,7 +986,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
                 handleTyping(e.target.value);
               }}
               placeholder="Напиши сообщение..."
-              className="flex-1 px-4 py-3 glass rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+              className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 glass rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition text-sm sm:text-base"
             />
             
             {/* Кнопка голосового сообщения */}
@@ -995,10 +995,10 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
               whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => setIsRecordingVoice(true)}
-              className="p-3 glass-hover rounded-lg transition"
+              className="p-2 sm:p-3 glass-hover rounded-lg transition"
               title="Записать голосовое"
             >
-              <Mic size={20} />
+              <Mic size={18} className="sm:w-5 sm:h-5" />
             </motion.button>
             
             {/* Кнопка отправки */}
@@ -1007,12 +1007,12 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
               whileTap={{ scale: 0.95 }}
               type="submit"
               disabled={(!newMessage.trim() && selectedFiles.length === 0) || loading}
-              className="px-6 py-3 gradient-bg rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+              className="px-4 sm:px-6 py-2.5 sm:py-3 gradient-bg rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
             >
               {uploadingFiles ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Send size={18} />
+                <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
               )}
             </motion.button>
           </form>

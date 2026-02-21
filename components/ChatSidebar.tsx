@@ -75,9 +75,9 @@ export default function ChatSidebar({
   };
 
   return (
-    <div className="w-full md:w-80 glass border-r border-white/10 flex flex-col">
+    <div className="w-full md:w-80 h-full glass border-r border-white/10 flex flex-col">
       {/* Шапка с профилем */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-3 sm:p-4 border-b border-white/10">
         <div className="flex items-center justify-between mb-4">
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -125,19 +125,19 @@ export default function ChatSidebar({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onSearchUser}
-            className="py-2.5 glass-hover rounded-lg flex items-center justify-center gap-2 font-medium"
+            className="py-2.5 glass-hover rounded-lg flex items-center justify-center gap-2 font-medium text-sm"
           >
             <Search size={18} />
-            Найти
+            <span className="hidden xs:inline">Найти</span>
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCreateGroup}
-            className="py-2.5 gradient-bg rounded-lg flex items-center justify-center gap-2 font-medium shadow-lg"
+            className="py-2.5 gradient-bg rounded-lg flex items-center justify-center gap-2 font-medium shadow-lg text-sm"
           >
             <Plus size={18} />
-            Группа
+            <span className="hidden xs:inline">Группа</span>
           </motion.button>
         </div>
       </div>

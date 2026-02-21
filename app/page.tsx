@@ -629,7 +629,7 @@ export default function HomePage() {
   return (
     <div className="h-screen flex overflow-hidden bg-[#0a0a0f]">
       {/* Боковая панель с чатами - скрывается на мобильных когда выбран чат */}
-      <div className={`${selectedRoom ? 'hidden md:flex' : 'flex'} flex-shrink-0`}>
+      <div className={`${selectedRoom ? 'hidden md:flex' : 'flex'} w-full md:w-auto flex-shrink-0`}>
         <ChatSidebar
           user={user}
           rooms={rooms}
@@ -644,7 +644,7 @@ export default function HomePage() {
       </div>
 
       {/* Окно чата - на мобильных занимает весь экран */}
-      <div className={`${selectedRoom ? 'flex' : 'hidden md:flex'} flex-1`}>
+      <div className={`${selectedRoom ? 'flex' : 'hidden md:flex'} flex-1 w-full md:w-auto`}>
         <ChatWindow
           user={user}
           room={selectedRoom}
