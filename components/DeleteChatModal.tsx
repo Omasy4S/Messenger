@@ -56,7 +56,7 @@ export default function DeleteChatModal({
               </motion.button>
             </div>
             <p className="text-sm text-gray-400 mt-2">
-              Выберите, как удалить чат "{chatName}"
+              Выберите, как удалить чат &quot;{chatName}&quot;
             </p>
           </div>
 

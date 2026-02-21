@@ -34,7 +34,7 @@ export default function KickedFromGroupNotification({ groupName, onClose }: Kick
 
         {/* Message */}
         <p className="text-gray-300 mb-6">
-          Вы больше не являетесь участником группы "{groupName}"
+          Вы больше не являетесь участником группы &quot;{groupName}&quot;
         </p>
 
         {/* Button */}
