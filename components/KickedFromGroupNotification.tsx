@@ -6,9 +6,10 @@ import { UserX } from 'lucide-react';
 interface KickedFromGroupNotificationProps {
   groupName: string;
   onClose: () => void;
+  isDissolved?: boolean; // true если группа распущена, false если кикнули
 }
 
-export default function KickedFromGroupNotification({ groupName, onClose }: KickedFromGroupNotificationProps) {
+export default function KickedFromGroupNotification({ groupName, onClose, isDissolved = false }: KickedFromGroupNotificationProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -30,11 +31,16 @@ export default function KickedFromGroupNotification({ groupName, onClose }: Kick
         </div>
 
         {/* Title */}
-        <h2 className="text-2xl font-bold mb-2">Вас исключили из группы</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {isDissolved ? 'Группа распущена' : 'Вас исключили из группы'}
+        </h2>
 
         {/* Message */}
         <p className="text-gray-300 mb-6">
-          Вы больше не являетесь участником группы &quot;{groupName}&quot;
+          {isDissolved 
+            ? `Группа "${groupName}" была распущена администратором`
+            : `Вы больше не являетесь участником группы "${groupName}"`
+          }
         </p>
 
         {/* Button */}

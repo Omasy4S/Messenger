@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, User, Hash, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
 import { supabase, type Profile, type Room } from '@/lib/supabase';
 import { createDirectRoom } from '@/lib/api-examples';
-import Image from 'next/image';
 
 interface SearchUserModalProps {
   currentUserId: string;
@@ -16,10 +15,62 @@ interface SearchUserModalProps {
 export default function SearchUserModal({ currentUserId, onClose, onChatCreated }: SearchUserModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [foundUser, setFoundUser] = useState<Profile | null>(null);
+  const [allUsers, setAllUsers] = useState<Profile[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
+  const [showUserList, setShowUserList] = useState(false);
+
+  // Загружаем всех пользователей при открытии
+  useEffect(() => {
+    loadAllUsers();
+  }, []);
+
+  const loadAllUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('id', currentUserId)
+        .order('username', { ascending: true });
+
+      if (error) throw error;
+      if (data) {
+        setAllUsers(data);
+        setFilteredUsers(data);
+      }
+    } catch (err) {
+      console.error('Ошибка загрузки пользователей:', err);
+    }
+  };
+
+  // Фильтруем пользователей при изменении поискового запроса
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setFoundUser(null);
+    setNotFound(false);
+    setError('');
+
+    if (!value.trim()) {
+      setFilteredUsers(allUsers);
+      setShowUserList(false);
+      return;
+    }
+
+    // Показываем список при вводе
+    setShowUserList(true);
+
+    // Фильтруем по username или user_tag
+    const filtered = allUsers.filter(user => 
+      user.username?.toLowerCase().includes(value.toLowerCase()) ||
+      user.user_tag?.includes(value) ||
+      `${user.username}#${user.user_tag}`.toLowerCase().includes(value.toLowerCase())
+    );
+    
+    setFilteredUsers(filtered);
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +80,7 @@ export default function SearchUserModal({ currentUserId, onClose, onChatCreated 
     setError('');
     setNotFound(false);
     setFoundUser(null);
+    setShowUserList(false);
 
     try {
       // Парсим username#tag
@@ -72,7 +124,7 @@ export default function SearchUserModal({ currentUserId, onClose, onChatCreated 
     setError('');
 
     try {
-      const { data: room, error: createError, isNew } = await createDirectRoom(currentUserId, foundUser.id);
+      const { data: room, error: createError } = await createDirectRoom(currentUserId, foundUser.id);
 
       if (createError) throw createError;
       if (!room) throw new Error('Не удалось создать чат');
@@ -103,7 +155,7 @@ export default function SearchUserModal({ currentUserId, onClose, onChatCreated 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-md glass rounded-2xl p-6 shadow-2xl"
+          className="relative w-full max-w-md glass rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
           {/* Заголовок */}
           <div className="flex items-center justify-between mb-6">
@@ -121,43 +173,103 @@ export default function SearchUserModal({ currentUserId, onClose, onChatCreated 
             </button>
           </div>
 
-          {/* Форма поиска */}
-          <form onSubmit={handleSearch} className="mb-6">
+          {/* Поле поиска */}
+          <div className="mb-4">
             <div className="relative">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="username#1234"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => searchQuery && setShowUserList(true)}
+                placeholder="Поиск по имени или username#1234"
                 className="w-full pl-11 pr-4 py-3 glass rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
                 autoFocus
               />
             </div>
             <p className="mt-2 text-xs text-gray-400">
-              Введи уникальный ID пользователя в формате username#1234
+              Начни вводить имя или введи полный ID в формате username#1234
             </p>
+          </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={!searchQuery.trim() || searching}
-              className="w-full mt-4 py-3 gradient-bg rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          {/* Список пользователей */}
+          {showUserList && filteredUsers.length > 0 && !foundUser && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 max-h-64 overflow-y-auto glass rounded-lg"
             >
-              {searching ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Поиск...
-                </>
-              ) : (
-                <>
-                  <Search size={18} />
-                  Найти
-                </>
+              {filteredUsers.slice(0, 10).map((user) => (
+                <motion.button
+                  key={user.id}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => {
+                    setFoundUser(user);
+                    setShowUserList(false);
+                    setSearchQuery(`${user.username}#${user.user_tag}`);
+                  }}
+                  className="w-full p-3 flex items-center gap-3 hover:bg-white/5 transition border-b border-white/5 last:border-0"
+                >
+                  <div className="w-10 h-10 gradient-bg rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {user.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.username || 'Avatar'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-medium truncate">{user.username}</p>
+                    <p className="text-xs text-gray-400">#{user.user_tag}</p>
+                  </div>
+                </motion.button>
+              ))}
+              {filteredUsers.length > 10 && (
+                <p className="p-2 text-xs text-center text-gray-400">
+                  Показано 10 из {filteredUsers.length}. Уточни поиск.
+                </p>
               )}
-            </motion.button>
-          </form>
+            </motion.div>
+          )}
+
+          {showUserList && filteredUsers.length === 0 && searchQuery && !foundUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-4 p-4 glass rounded-lg text-center"
+            >
+              <p className="text-gray-400 text-sm">Пользователи не найдены</p>
+            </motion.div>
+          )}
+
+          {/* Кнопка точного поиска по ID */}
+          {searchQuery.includes('#') && !foundUser && !showUserList && (
+            <form onSubmit={handleSearch} className="mb-6">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={searching}
+                className="w-full py-3 gradient-bg rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {searching ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Поиск...
+                  </>
+                ) : (
+                  <>
+                    <Hash size={18} />
+                    Найти точно по ID
+                  </>
+                )}
+              </motion.button>
+            </form>
+          )}
 
           {/* Результат поиска */}
           <AnimatePresence mode="wait">
@@ -184,11 +296,9 @@ export default function SearchUserModal({ currentUserId, onClose, onChatCreated 
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-16 h-16 gradient-bg rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                     {foundUser.avatar_url ? (
-                      <Image
+                      <img
                         src={foundUser.avatar_url}
                         alt={foundUser.username || 'Avatar'}
-                        width={64}
-                        height={64}
                         className="w-full h-full object-cover"
                       />
                     ) : (

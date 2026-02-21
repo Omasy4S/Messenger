@@ -63,12 +63,23 @@ export default function EditProfileModal({ user, onClose, onProfileUpdated }: Ed
 
     try {
       const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      // Добавляем timestamp чтобы избежать кеширования
+      const timestamp = Date.now();
+      const fileName = `${user.id}/avatar-${timestamp}.${fileExt}`;
 
       // Удаляем старую аватарку если есть
       if (user.avatar_url) {
-        const oldPath = user.avatar_url.split('/').slice(-2).join('/');
-        await supabase.storage.from('avatars').remove([oldPath]);
+        try {
+          // Извлекаем путь из URL правильно
+          const urlParts = user.avatar_url.split('/avatars/');
+          if (urlParts.length > 1) {
+            const oldPath = urlParts[1].split('?')[0]; // Убираем query параметры если есть
+            await supabase.storage.from('avatars').remove([oldPath]);
+          }
+        } catch (err) {
+          console.error('Не удалось удалить старую аватарку:', err);
+          // Продолжаем даже если не удалось удалить старую
+        }
       }
 
       // Загружаем новую
@@ -78,12 +89,12 @@ export default function EditProfileModal({ user, onClose, onProfileUpdated }: Ed
 
       if (uploadError) throw uploadError;
 
-      // Получаем публичный URL
+      // Получаем публичный URL с cache-busting параметром
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
-      return data.publicUrl;
+      return `${data.publicUrl}?t=${timestamp}`;
     } catch (err: any) {
       throw new Error('Не удалось загрузить аватарку: ' + err.message);
     } finally {

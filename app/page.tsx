@@ -19,7 +19,7 @@ export default function HomePage() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSearchUser, setShowSearchUser] = useState(false);
-  const [kickedFromGroup, setKickedFromGroup] = useState<string | null>(null);
+  const [kickedFromGroup, setKickedFromGroup] = useState<{ name: string; isDissolved: boolean } | null>(null);
   const router = useRouter();
 
   // Синхронизируем ref с state
@@ -219,7 +219,8 @@ export default function HomePage() {
               // Если пользователь сейчас в этом чате, показываем уведомление
               if (selectedRoomRef.current?.id === roomToDelete.id) {
                 const roomName = roomToDelete.name || 'Группа';
-                setKickedFromGroup(roomName);
+                // НЕ показываем уведомление - оно будет показано через DELETE rooms
+                // setKickedFromGroup({ name: roomName, isDissolved: false });
                 setSelectedRoom(null);
               }
               
@@ -239,14 +240,23 @@ export default function HomePage() {
           table: 'rooms',
         },
         (payload) => {
-          // Комната полностью удалена - убираем из списка
+          // Комната полностью удалена (распущена) - показываем уведомление всем
           const deletedRoomId = payload.old.id;
-          setRooms(prevRooms => prevRooms.filter(r => r.id !== deletedRoomId));
           
-          // Если это была выбранная комната, сбрасываем выбор
-          setSelectedRoom(prevRoom => 
-            prevRoom?.id === deletedRoomId ? null : prevRoom
-          );
+          setRooms(prevRooms => {
+            const roomToDelete = prevRooms.find(r => r.id === deletedRoomId);
+            
+            if (roomToDelete) {
+              // Если пользователь сейчас в этом чате, показываем уведомление о роспуске
+              if (selectedRoomRef.current?.id === deletedRoomId) {
+                const roomName = roomToDelete.name || 'Группа';
+                setKickedFromGroup({ name: roomName, isDissolved: true });
+                setSelectedRoom(null);
+              }
+            }
+            
+            return prevRooms.filter(r => r.id !== deletedRoomId);
+          });
         }
       )
       .subscribe();
@@ -558,17 +568,18 @@ export default function HomePage() {
           console.error('Error deleting messages:', messagesError);
         }
 
-        // Затем удаляем участников
+        // Затем удаляем участников КРОМЕ админа
         const { error: membersError } = await supabase
           .from('room_members')
           .delete()
-          .eq('room_id', roomId);
+          .eq('room_id', roomId)
+          .neq('user_id', user.id); // Не удаляем админа
 
         if (membersError) {
           console.error('Error deleting members:', membersError);
         }
 
-        // И наконец удаляем саму комнату
+        // Удаляем саму комнату (это удалит и админа через CASCADE)
         const { error: roomError } = await supabase
           .from('rooms')
           .delete()
@@ -686,7 +697,8 @@ export default function HomePage() {
       {/* Уведомление об исключении из группы */}
       {kickedFromGroup && (
         <KickedFromGroupNotification
-          groupName={kickedFromGroup}
+          groupName={kickedFromGroup.name}
+          isDissolved={kickedFromGroup.isDissolved}
           onClose={() => setKickedFromGroup(null)}
         />
       )}
