@@ -94,7 +94,14 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
   };
 
   const handleCancel = () => {
-    stopRecording();
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    streamRef.current?.getTracks().forEach(track => track.stop());
     onCancel();
   };
 

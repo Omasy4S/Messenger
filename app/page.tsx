@@ -664,7 +664,7 @@ export default function HomePage() {
       </div>
 
       <div className={`${selectedRoom ? 'flex' : 'hidden md:flex'} flex-1 w-full md:w-auto`}>
-        {selectedRoom && (
+        {selectedRoom ? (
           <ChatWindow
             user={user}
             room={selectedRoom}
@@ -672,6 +672,18 @@ export default function HomePage() {
             onBack={handleBack}
             onDeleteRoom={handleDeleteRoom}
           />
+        ) : (
+          <div className="hidden md:flex flex-1 items-center justify-center bg-[#0a0a0f]">
+            <div className="text-center space-y-4 px-6">
+              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-medium text-gray-200">Выберите чат</h3>
+              <p className="text-gray-500 text-sm max-w-xs">Начните общение, выбрав существующий чат или создав новый</p>
+            </div>
+          </div>
         )}
       </div>
 
