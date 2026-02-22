@@ -88,6 +88,9 @@ ALTER TABLE typing_indicators ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
 CREATE POLICY "Users can view all profiles" ON profiles FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
 
@@ -315,3 +318,40 @@ USING (bucket_id = 'message-files' AND (storage.foldername(name))[1] = auth.uid(
 -- ============================================
 -- ГОТОВО! База данных настроена
 -- ============================================
+
+
+-- Функция для обновления updated_at в rooms при новом сообщении
+CREATE OR REPLACE FUNCTION update_room_timestamp()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE rooms SET updated_at = NOW() WHERE id = NEW.room_id;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_update_room_timestamp ON messages;
+CREATE TRIGGER trigger_update_room_timestamp
+AFTER INSERT ON messages
+FOR EACH ROW
+EXECUTE FUNCTION update_room_timestamp();
+
+-- Функция для создания профиля с уникальным тегом
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE random_tag TEXT;
+BEGIN
+  random_tag := LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
+  INSERT INTO public.profiles (id, email, username, user_tag)
+  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)), random_tag)
+  ON CONFLICT (user_tag) DO UPDATE SET user_tag = LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
+  RETURN NEW;
+END;
+$$;

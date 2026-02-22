@@ -13,6 +13,7 @@ interface ChatInfoPanelProps {
   currentUserId: string;
   onClose: () => void;
   onRoomUpdated?: (room: Room) => void;
+  onDeleteRoom?: (roomId: string, deleteForEveryone: boolean) => void;
 }
 
 interface RoomMemberWithProfile {
@@ -21,7 +22,7 @@ interface RoomMemberWithProfile {
   profiles: Profile;
 }
 
-export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpdated }: ChatInfoPanelProps) {
+export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpdated, onDeleteRoom }: ChatInfoPanelProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'media'>('info');
   const [members, setMembers] = useState<RoomMemberWithProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,8 +37,10 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
   const [contacts, setContacts] = useState<Profile[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [addMemberTab, setAddMemberTab] = useState<'contacts' | 'search'>('contacts');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const isAdmin = room.type === 'group' && room.created_by === currentUserId;
+  const canDeleteForEveryone = room.type === 'direct' || (room.type === 'group' && isAdmin);
 
   // Загружаем участников группы
   useEffect(() => {
@@ -439,6 +442,23 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
                   <p className="text-xs text-gray-400">Фото, файлы, голосовые</p>
                 </div>
               </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full p-4 glass-hover hover:bg-red-500/10 rounded-xl text-left transition flex items-center gap-3 border border-transparent hover:border-red-500/30"
+              >
+                <div className="p-2 glass rounded-lg">
+                  <X size={20} className="text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-red-400">Удалить чат</p>
+                  <p className="text-xs text-gray-400">
+                    {canDeleteForEveryone ? 'Удалить для себя или для всех' : 'Удалить только для себя'}
+                  </p>
+                </div>
+              </motion.button>
             </div>
 
             {/* Участники группы */}
@@ -718,7 +738,6 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
           </motion.div>
         )}
 
-        {/* Модальное окно подтверждения удаления участника */}
         {memberToRemove && (
           <ConfirmModal
             isOpen={true}
@@ -730,6 +749,70 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
             onCancel={() => setMemberToRemove(null)}
             danger
           />
+        )}
+        
+        {showDeleteModal && onDeleteRoom && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm glass rounded-2xl shadow-2xl border border-white/10"
+            >
+              <div className="p-6">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <X size={32} className="text-red-400" />
+                </div>
+                
+                <h3 className="text-xl font-semibold text-center mb-2">Удалить чат?</h3>
+                <p className="text-gray-400 text-center mb-6">
+                  {room.type === 'direct' 
+                    ? 'Выберите, как удалить чат'
+                    : isAdmin
+                    ? 'Вы можете распустить группу или просто выйти'
+                    : 'Вы можете только выйти из группы'}
+                </p>
+                
+                <div className="space-y-2">
+                  {canDeleteForEveryone && (
+                    <button
+                      onClick={() => {
+                        onDeleteRoom(room.id, true);
+                        setShowDeleteModal(false);
+                        onClose();
+                      }}
+                      className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-medium transition"
+                    >
+                      {room.type === 'direct' ? 'Удалить для всех' : 'Распустить группу'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      onDeleteRoom(room.id, false);
+                      setShowDeleteModal(false);
+                      onClose();
+                    }}
+                    className="w-full py-3 glass-hover rounded-lg font-medium transition"
+                  >
+                    {room.type === 'direct' ? 'Удалить для меня' : 'Выйти из группы'}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="w-full py-3 glass-hover rounded-lg font-medium transition"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </div>
     </AnimatePresence>

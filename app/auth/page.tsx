@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { MessageSquare, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 
 // Перевод ошибок Supabase
 const translateError = (error: string): string => {
@@ -46,7 +46,6 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        // Регистрация
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -92,11 +91,48 @@ export default function AuthPage() {
               transition={{ delay: 0.2, type: 'spring' }}
               className="w-20 h-20 mx-auto mb-4 relative"
             >
-              {/* Красивая иконка с градиентом и эффектами */}
-              <div className="absolute inset-0 gradient-bg rounded-3xl blur-xl opacity-60 animate-pulse" />
-              <div className="relative w-full h-full gradient-bg rounded-3xl flex items-center justify-center shadow-2xl">
-                <MessageSquare className="w-10 h-10" strokeWidth={2.5} />
-              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-full h-full drop-shadow-2xl">
+                <defs>
+                  <linearGradient id="bg-grad-auth" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#18181b" />
+                    <stop offset="100%" stopColor="#09090b" />
+                  </linearGradient>
+                  <linearGradient id="front-grad-auth" x1="20" y1="38" x2="70" y2="86" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#4f46e5" />
+                  </linearGradient>
+                  <linearGradient id="back-grad-auth" x1="36" y1="20" x2="82" y2="62" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#3f3f46" />
+                    <stop offset="100%" stopColor="#18181b" />
+                  </linearGradient>
+                  <filter id="shadow-auth" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.6"/>
+                  </filter>
+                  <filter id="glow-auth" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <rect width="100" height="100" rx="24" fill="url(#bg-grad-auth)"/>
+                <rect x="0.5" y="0.5" width="99" height="99" rx="23.5" fill="none" stroke="#27272a" strokeWidth="1"/>
+                <circle cx="45" cy="59" r="18" fill="#4f46e5" filter="url(#glow-auth)" opacity="0.4" />
+                <g>
+                  <rect x="36" y="20" width="46" height="34" rx="14" fill="url(#back-grad-auth)" />
+                  <path d="M 60 40 L 84 62 L 70 52 Z" fill="url(#back-grad-auth)" />
+                  <rect x="36" y="20" width="46" height="34" rx="14" fill="none" stroke="#52525b" strokeWidth="0.75" />
+                </g>
+                <g filter="url(#shadow-auth)">
+                  <rect x="20" y="40" width="50" height="38" rx="16" fill="url(#front-grad-auth)" />
+                  <path d="M 35 60 L 14 86 L 45 76 Z" fill="url(#front-grad-auth)" />
+                  <rect x="20.5" y="40.5" width="49" height="37" rx="15.5" fill="none" stroke="white" strokeOpacity="0.25" strokeWidth="1" />
+                </g>
+                <circle cx="33" cy="59" r="3.5" fill="white" opacity="1"/>
+                <circle cx="45" cy="59" r="3.5" fill="white" opacity="0.75"/>
+                <circle cx="57" cy="59" r="3.5" fill="white" opacity="0.4"/>
+              </svg>
             </motion.div>
             <h1 className="text-3xl font-bold mb-2">
               {isSignUp ? 'Создать аккаунт' : 'Добро пожаловать'}

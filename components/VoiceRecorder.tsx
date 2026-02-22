@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mic, Square, Trash2, Send } from 'lucide-react';
+import { Square, Trash2, Send } from 'lucide-react';
 
 interface VoiceRecorderProps {
   onSend: (audioBlob: Blob, duration: number) => void;
@@ -16,12 +16,18 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    startRecording();
+    if (!startedRef.current) {
+      startedRef.current = true;
+      startRecording();
+    }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
       if (mediaRecorderRef.current?.state === 'recording') {
         mediaRecorderRef.current.stop();
       }
@@ -56,7 +62,7 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
       mediaRecorder.start();
       setIsRecording(true);
 
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);
     } catch (error) {
@@ -67,13 +73,13 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
   };
 
   const stopRecording = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
     }
   };
 
@@ -105,7 +111,6 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
       exit={{ opacity: 0, y: 20 }}
       className="flex items-center gap-3 p-4 glass border-t border-white/10"
     >
-      {/* Индикатор записи */}
       {isRecording && (
         <motion.div
           animate={{ scale: [1, 1.2, 1] }}
@@ -114,7 +119,6 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
         />
       )}
 
-      {/* Таймер */}
       <div className="flex-1">
         <p className="text-lg font-mono">{formatDuration(duration)}</p>
         <p className="text-xs text-gray-400">
@@ -122,7 +126,6 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
         </p>
       </div>
 
-      {/* Кнопки */}
       {isRecording ? (
         <>
           <motion.button

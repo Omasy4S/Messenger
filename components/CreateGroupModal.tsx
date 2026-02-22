@@ -177,7 +177,11 @@ export default function CreateGroupModal({ user, onClose, onRoomCreated }: Creat
                     className="w-full px-3 py-2 glass rounded-lg text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                   
-                  {filteredUsers.length === 0 ? (
+                  {searchQuery.trim() === '' ? (
+                    <p className="text-sm text-gray-400 text-center py-2">
+                      Начните вводить имя для поиска
+                    </p>
+                  ) : filteredUsers.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-2">
                       Пользователи не найдены
                     </p>

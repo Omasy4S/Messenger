@@ -75,57 +75,56 @@ export default function ChatSidebar({
   };
 
   return (
-    <div className="w-full md:w-80 h-full glass border-r border-white/10 flex flex-col">
-      {/* Шапка с профилем */}
-      <div className="p-3 sm:p-4 border-b border-white/10">
-        <div className="flex items-center justify-between mb-4">
+    <div className="w-full md:w-80 h-full bg-[#18181b] border-r border-white/[0.08] flex flex-col relative z-10">
+      <div className="p-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onEditProfile}
-            className="flex items-center gap-3 flex-1 min-w-0 glass-hover p-2 rounded-lg transition"
+            className="flex items-center gap-3 flex-1 min-w-0 hover:bg-white/5 p-1.5 -ml-1.5 rounded-xl transition group"
           >
             <div className="relative flex-shrink-0">
-              <div className="w-12 h-12 gradient-bg rounded-full flex items-center justify-center overflow-hidden">
+              <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center overflow-hidden border border-white/5 group-hover:border-white/10 transition">
                 {user?.avatar_url ? (
                   <Image
                     src={user.avatar_url}
                     alt={user.username || 'Avatar'}
-                    width={48}
-                    height={48}
+                    width={40}
+                    height={40}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <User className="w-6 h-6" />
+                  <User className="w-5 h-5" />
                 )}
               </div>
-              <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#0a0a0f] status-${user?.status || 'offline'}`} />
+              <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full status-${user?.status || 'offline'}`} />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className="font-semibold truncate">{user?.username || 'Пользователь'}</p>
-              <p className="text-xs text-gray-400">
+              <p className="font-semibold text-sm text-zinc-100 truncate">{user?.username || 'Пользователь'}</p>
+              <p className="text-xs text-zinc-500 font-medium">
                 {user?.user_tag ? `#${user.user_tag}` : 'Нажми для настройки'}
               </p>
             </div>
           </motion.button>
+          
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onLogout}
-            className="p-2 glass-hover rounded-lg transition ml-2"
+            className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition ml-2"
             title="Выйти"
           >
             <LogOut size={18} />
           </motion.button>
         </div>
 
-        {/* Кнопки действий */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex gap-2">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onSearchUser}
-            className="py-2.5 glass-hover rounded-lg flex items-center justify-center gap-2 font-medium text-sm"
+            className="flex-1 py-2.5 bg-zinc-800/50 hover:bg-zinc-800 rounded-lg flex items-center justify-center gap-2 font-medium text-sm transition"
           >
             <Search size={18} />
             <span className="hidden xs:inline">Найти</span>
@@ -134,7 +133,7 @@ export default function ChatSidebar({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCreateGroup}
-            className="py-2.5 gradient-bg rounded-lg flex items-center justify-center gap-2 font-medium shadow-lg text-sm"
+            className="flex-1 py-2.5 bg-indigo-500 hover:bg-indigo-600 rounded-lg flex items-center justify-center gap-2 font-medium shadow-sm text-sm transition"
           >
             <Plus size={18} />
             <span className="hidden xs:inline">Группа</span>
@@ -142,35 +141,36 @@ export default function ChatSidebar({
         </div>
       </div>
 
-      {/* Список чатов */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
         {rooms.length === 0 ? (
           <div className="text-center py-12 px-4">
-            <div className="w-16 h-16 mx-auto mb-4 glass rounded-full flex items-center justify-center">
-              <MessageCircle size={32} className="text-gray-400" />
+            <div className="w-16 h-16 mx-auto mb-4 bg-zinc-800 rounded-full flex items-center justify-center">
+              <MessageCircle size={32} className="text-zinc-400" />
             </div>
-            <p className="text-sm text-gray-300 mb-1">Нет активных чатов</p>
-            <p className="text-xs text-gray-500">Создай группу, чтобы начать общение</p>
+            <p className="text-sm text-zinc-300 mb-1">Нет активных чатов</p>
+            <p className="text-xs text-zinc-500">Создай группу, чтобы начать общение</p>
           </div>
         ) : (
-          rooms.map((room) => (
-            <motion.button
-              key={room.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              whileHover={{ x: 4 }}
-              onClick={() => onSelectRoom(room)}
-              className={`w-full p-3 rounded-xl mb-2 text-left transition relative group ${
-                selectedRoom?.id === room.id
-                  ? 'glass border-2 border-purple-500/50 shadow-lg'
-                  : 'glass-hover'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative flex-shrink-0">
-                  <div className={`w-12 h-12 gradient-bg rounded-xl flex items-center justify-center overflow-hidden ${
-                    selectedRoom?.id === room.id ? 'shadow-lg' : ''
-                  }`}>
+          rooms.map((room) => {
+            const isActive = selectedRoom?.id === room.id;
+            return (
+              <motion.button
+                key={room.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => onSelectRoom(room)}
+                className={`w-full p-2.5 rounded-xl mb-1 text-left transition relative group flex items-center gap-3 ${
+                  isActive
+                    ? 'bg-zinc-800/80'
+                    : 'hover:bg-white/5'
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-r-full" />
+                )}
+                
+                <div className={`relative flex-shrink-0 ${isActive ? 'ml-1' : ''}`}>
+                  <div className={`w-12 h-12 ${room.type === 'group' ? 'bg-zinc-700 rounded-2xl' : 'bg-zinc-800 rounded-full'} flex items-center justify-center overflow-hidden ${isActive ? 'shadow-sm' : ''}`}>
                     {room.type === 'direct' && room.partner_profile?.avatar_url ? (
                       <Image
                         src={room.partner_profile.avatar_url}
@@ -189,23 +189,24 @@ export default function ChatSidebar({
                         unoptimized
                       />
                     ) : room.type === 'group' ? (
-                      <Users size={22} />
+                      <Users size={24} className="text-zinc-400" />
                     ) : (
-                      <MessageCircle size={22} />
+                      <MessageCircle size={24} className="text-zinc-400" />
                     )}
                   </div>
-                  {/* Индикатор онлайн для личных чатов */}
                   {room.type === 'direct' && room.partner_profile && (
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0a0a0f] status-${room.partner_profile.status || 'offline'}`} />
+                    <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full status-${room.partner_profile.status || 'offline'}`} />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 pr-8">
-                  <p className="font-medium truncate">
-                    {room.type === 'direct' && room.partner_profile
-                      ? room.partner_profile.username || 'Пользователь'
-                      : room.name || 'Личный чат'}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
+                <div className="flex-1 min-w-0 pr-4">
+                  <div className="flex justify-between items-baseline mb-0.5">
+                    <p className={`font-medium text-sm truncate ${isActive ? 'text-white' : 'text-zinc-100'}`}>
+                      {room.type === 'direct' && room.partner_profile
+                        ? room.partner_profile.username || 'Пользователь'
+                        : room.name || 'Личный чат'}
+                    </p>
+                  </div>
+                  <p className={`text-xs truncate ${isActive ? 'text-indigo-200/70' : 'text-zinc-400'}`}>
                     {room.type === 'direct' && room.partner_profile
                       ? room.partner_profile.status === 'online'
                         ? 'в сети'
@@ -215,36 +216,20 @@ export default function ChatSidebar({
                       : 'Личное сообщение'}
                   </p>
                 </div>
-                {/* Счетчик непрочитанных */}
+                
                 {room.unread_count !== undefined && room.unread_count > 0 && (
-                  <div className="absolute top-3 right-10 flex-shrink-0 min-w-[24px] h-6 px-2 bg-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-indigo-500 min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-[10px] font-bold text-white">
                       {room.unread_count > 99 ? '99+' : room.unread_count}
                     </span>
                   </div>
                 )}
-              </div>
-              
-              {/* Кнопка удаления (всегда видна) */}
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="absolute top-2 right-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRoomToDelete(room);
-                }}
-              >
-                <div className="p-1.5 glass-hover rounded-lg hover:bg-red-500/10 transition">
-                  <Trash2 size={14} className="text-gray-400 hover:text-red-400 transition" />
-                </div>
-              </motion.div>
-            </motion.button>
-          ))
+              </motion.button>
+            );
+          })
         )}
       </div>
 
-      {/* Модальное окно удаления чата */}
       {roomToDelete && (
         <DeleteChatModal
           room={roomToDelete}

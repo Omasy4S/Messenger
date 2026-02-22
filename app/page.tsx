@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase, type Profile, type Room, type Message } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import ChatSidebar from '@/components/ChatSidebar';
@@ -81,7 +81,6 @@ export default function HomePage() {
   const subscribeToRoomUpdates = () => {
     if (!user) return;
 
-    // Подписываемся на изменения комнат
     const channel = supabase
       .channel('rooms-updates')
       .on(
@@ -94,20 +93,12 @@ export default function HomePage() {
         (payload: any) => {
           const updatedRoom = payload.new as Room;
           
-          // Обновляем комнату в списке, сохраняя partner_profile и room_member_id
           setRooms(prevRooms => 
             prevRooms.map(r => 
               r.id === updatedRoom.id 
-                ? { ...updatedRoom, partner_profile: r.partner_profile, room_member_id: (r as any).room_member_id }
+                ? { ...updatedRoom, partner_profile: r.partner_profile, room_member_id: (r as any).room_member_id, unread_count: r.unread_count }
                 : r
             )
-          );
-
-          // Обновляем выбранную комнату если это она, сохраняя partner_profile и room_member_id
-          setSelectedRoom(prevRoom => 
-            prevRoom?.id === updatedRoom.id 
-              ? { ...updatedRoom, partner_profile: prevRoom.partner_profile, room_member_id: (prevRoom as any).room_member_id }
-              : prevRoom
           );
         }
       )
@@ -343,7 +334,6 @@ export default function HomePage() {
 
   const checkUser = async () => {
     try {
-      // Проверяем авторизацию
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -351,7 +341,6 @@ export default function HomePage() {
         return;
       }
 
-      // Получаем профиль пользователя
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
@@ -359,13 +348,11 @@ export default function HomePage() {
         .single();
 
       if (profile) {
-        // Обновляем статус на "онлайн"
         await supabase
           .from('profiles')
           .update({ status: 'online', last_seen: new Date().toISOString() })
           .eq('id', session.user.id);
         
-        // Устанавливаем профиль с обновленным статусом
         setUser({
           ...profile,
           status: 'online',
@@ -589,10 +576,10 @@ export default function HomePage() {
     }
   };
 
-  const handleSelectRoom = async (room: Room) => {
+  const handleSelectRoom = useCallback((room: Room) => {
     setSelectedRoom(room);
+    selectedRoomRef.current = room;
     
-    // Сбрасываем счетчик непрочитанных
     if (room.unread_count && room.unread_count > 0) {
       setRooms(prevRooms => 
         prevRooms.map(r => 
@@ -600,7 +587,18 @@ export default function HomePage() {
         )
       );
     }
-  };
+  }, []);
+
+  const handleRoomUpdated = useCallback((updatedRoom: Room) => {
+    setSelectedRoom(updatedRoom);
+    selectedRoomRef.current = updatedRoom;
+    setRooms(prevRooms => prevRooms.map(r => r.id === updatedRoom.id ? updatedRoom : r));
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSelectedRoom(null);
+    selectedRoomRef.current = null;
+  }, []);
 
   if (loading) {
     return (
@@ -630,17 +628,16 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Окно чата - на мобильных занимает весь экран */}
       <div className={`${selectedRoom ? 'flex' : 'hidden md:flex'} flex-1 w-full md:w-auto`}>
-        <ChatWindow
-          user={user}
-          room={selectedRoom}
-          onRoomUpdated={(updatedRoom) => {
-            setSelectedRoom(updatedRoom);
-            setRooms(rooms.map(r => r.id === updatedRoom.id ? updatedRoom : r));
-          }}
-          onBack={() => setSelectedRoom(null)}
-        />
+        {selectedRoom && (
+          <ChatWindow
+            user={user}
+            room={selectedRoom}
+            onRoomUpdated={handleRoomUpdated}
+            onBack={handleBack}
+            onDeleteRoom={handleDeleteRoom}
+          />
+        )}
       </div>
 
       {/* Модальное окно создания группы */}
