@@ -70,7 +70,7 @@ export async function createDirectRoom(userId1: string, userId2: string) {
         .select('user_id')
         .eq('room_id', room.room_id);
 
-      if (members?.length === 2 && members.some(m => m.user_id === userId2)) {
+      if (members?.length === 2 && members.some((m: any) => m.user_id === userId2)) {
         // Чат уже существует
         const { data: existingRoom } = await supabase
           .from('rooms')
@@ -296,8 +296,7 @@ export function subscribeToMessages(
         table: 'messages',
         filter: `room_id=eq.${roomId}`,
       },
-      async (payload) => {
-        // Получаем профиль отправителя
+      async (payload: any) => {
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -329,7 +328,7 @@ export function subscribeToUserStatus(
         table: 'profiles',
         filter: `id=eq.${userId}`,
       },
-      (payload) => {
+      (payload: any) => {
         callback(payload.new.status);
       }
     )
@@ -355,8 +354,7 @@ export function subscribeToUserRooms(
         table: 'room_members',
         filter: `user_id=eq.${userId}`,
       },
-      async (payload) => {
-        // Получаем данные комнаты
+      async (payload: any) => {
         const { data: room } = await supabase
           .from('rooms')
           .select('*')

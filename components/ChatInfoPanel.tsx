@@ -60,7 +60,7 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
 
       if (error) throw error;
       
-      setMembers((data || []).map(item => ({
+      setMembers((data || []).map((item: any) => ({
         ...item,
         profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
       })) as RoomMemberWithProfile[]);
@@ -204,7 +204,7 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
 
       // Фильтруем пользователей которые уже в группе
       const memberIds = members.map(m => m.user_id);
-      const filtered = (data || []).filter(user => 
+      const filtered = (data || []).filter((user: Profile) => 
         !memberIds.includes(user.id) && user.id !== currentUserId
       );
 
@@ -224,7 +224,7 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
         .select('room_id')
         .eq('user_id', currentUserId);
 
-      const roomIds = (roomMembers || []).map(rm => rm.room_id);
+      const roomIds = (roomMembers || []).map((rm: any) => rm.room_id);
       if (roomIds.length === 0) {
         setContacts([]);
         return;
@@ -236,7 +236,7 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
         .eq('type', 'direct')
         .in('id', roomIds);
 
-      const directRoomIds = (directRooms || []).map(r => r.id);
+      const directRoomIds = (directRooms || []).map((r: any) => r.id);
       if (directRoomIds.length === 0) {
         setContacts([]);
         return;
@@ -250,11 +250,11 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
 
       const memberIds = members.map(m => m.user_id);
       const uniqueContacts = (partners || [])
-        .map(p => Array.isArray(p.profiles) ? p.profiles[0] : p.profiles)
-        .filter((profile, index, self) => 
+        .map((p: any) => Array.isArray(p.profiles) ? p.profiles[0] : p.profiles)
+        .filter((profile: any, index: number, self: any[]) => 
           profile && 
           !memberIds.includes(profile.id) &&
-          self.findIndex(p => p?.id === profile.id) === index
+          self.findIndex((p: any) => p?.id === profile.id) === index
         ) as Profile[];
 
       setContacts(uniqueContacts);

@@ -124,8 +124,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
           table: 'messages',
           filter: `room_id=eq.${room.id}`,
         },
-        async (payload) => {
-          // Получаем профиль отправителя
+        async (payload: any) => {
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -145,8 +144,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
           table: 'messages',
           filter: `room_id=eq.${room.id}`,
         },
-        (payload) => {
-          // Обновляем сообщение в списке
+        (payload: any) => {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === payload.new.id
@@ -164,8 +162,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
           table: 'messages',
           filter: `room_id=eq.${room.id}`,
         },
-        (payload) => {
-          // Удаляем сообщение из списка
+        (payload: any) => {
           setMessages((prev) => prev.filter((msg) => msg.id !== payload.old.id));
         }
       )
@@ -190,8 +187,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
           table: 'typing_indicators',
           filter: `room_id=eq.${room.id}`,
         },
-        async (payload) => {
-          // Добавляем индикатор только для других пользователей
+        async (payload: any) => {
           if (payload.new.user_id !== user?.id) {
             const { data: profile } = await supabase
               .from('profiles')
@@ -201,7 +197,6 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
 
             if (profile) {
               setTypingUsers((prev) => {
-                // Проверяем, нет ли уже этого пользователя
                 const exists = prev.find(t => t.user_id === payload.new.user_id);
                 if (exists) return prev;
                 return [...prev, { ...payload.new, profiles: profile } as TypingIndicator];
@@ -218,14 +213,12 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
           table: 'typing_indicators',
           filter: `room_id=eq.${room.id}`,
         },
-        (payload) => {
-          // Удаляем индикатор для любого пользователя
+        (payload: any) => {
           const deletedUserId = payload.old.user_id;
           const deletedId = payload.old.id;
           
           setTypingUsers((prev) => {
             return prev.filter(t => {
-              // Фильтруем по user_id если он есть, иначе по id
               if (deletedUserId) {
                 return t.user_id !== deletedUserId;
               } else if (deletedId) {

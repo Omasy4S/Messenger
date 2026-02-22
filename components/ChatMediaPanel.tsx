@@ -40,7 +40,7 @@ export default function ChatMediaPanel({ room, onClose }: ChatMediaPanelProps) {
       if (error) throw error;
 
       // Фильтруем только сообщения с вложениями на клиенте
-      const messagesWithAttachments = (data || []).filter(msg => 
+      const messagesWithAttachments = (data || []).filter((msg: any) => 
         msg.attachments && 
         Array.isArray(msg.attachments) && 
         msg.attachments.length > 0
