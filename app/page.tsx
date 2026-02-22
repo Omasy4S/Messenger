@@ -50,24 +50,59 @@ export default function HomePage() {
       subscribeToProfileUpdates();
       subscribeToMessages();
 
-      const interval = setInterval(async () => {
-        await supabase
-          .from('profiles')
-          .update({ last_seen: new Date().toISOString() })
-          .eq('id', user.id);
-      }, 30000);
-
-      const handleBeforeUnload = () => {
-        supabase
-          .from('profiles')
-          .update({ status: 'offline', last_seen: new Date().toISOString() })
-          .eq('id', user.id);
+      const updateLastSeen = async () => {
+        if (!document.hidden) {
+          await supabase
+            .from('profiles')
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', user.id);
+        }
       };
 
+      const interval = setInterval(updateLastSeen, 120000);
+
+      const handleVisibilityChange = async () => {
+        if (document.hidden) {
+          await supabase
+            .from('profiles')
+            .update({ status: 'offline', last_seen: new Date().toISOString() })
+            .eq('id', user.id);
+        } else {
+          await supabase
+            .from('profiles')
+            .update({ status: 'online', last_seen: new Date().toISOString() })
+            .eq('id', user.id);
+        }
+      };
+
+      const handleBeforeUnload = () => {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        
+        if (supabaseUrl && supabaseKey) {
+          fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ 
+              status: 'offline', 
+              last_seen: new Date().toISOString() 
+            }),
+            keepalive: true
+          });
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
       window.addEventListener('beforeunload', handleBeforeUnload);
 
       return () => {
         clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('beforeunload', handleBeforeUnload);
         supabase.channel('rooms-updates').unsubscribe();
         supabase.channel('new-rooms').unsubscribe();

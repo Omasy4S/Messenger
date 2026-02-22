@@ -9,6 +9,12 @@ import ChatInfoPanel from './ChatInfoPanel';
 import VoiceRecorder from './VoiceRecorder';
 import VoiceMessage from './VoiceMessage';
 
+const isOnline = (profile: Profile) => {
+  if (profile.status !== 'online') return false;
+  const lastSeen = new Date(profile.last_seen).getTime();
+  return Date.now() - lastSeen < 150000;
+};
+
 interface ChatWindowProps {
   user: Profile | null;
   room: Room | null;
@@ -29,10 +35,16 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack, onDelete
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [, forceUpdate] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const isTypingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => forceUpdate(n => n + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const formatLastSeen = (lastSeen: string) => {
     const now = new Date();
@@ -60,11 +72,18 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack, onDelete
       const unsubMessages = subscribeToMessages();
       const unsubTyping = subscribeToTyping();
       markAsRead();
-      clearOldTypingIndicators();
 
       return () => {
         unsubMessages?.();
         unsubTyping?.();
+        if (user) {
+          supabase
+            .from('typing_indicators')
+            .delete()
+            .eq('room_id', room.id)
+            .eq('user_id', user.id)
+            .then(() => {});
+        }
       };
     }
   }, [room?.id]);
@@ -245,39 +264,30 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack, onDelete
 
     const now = new Date().toISOString();
     
-    await supabase
-      .from('room_members')
-      .update({ last_read_at: now })
-      .eq('room_id', room.id)
-      .eq('user_id', user.id);
-
-    await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('room_id', room.id)
-      .neq('user_id', user.id)
-      .eq('is_read', false);
+    await Promise.all([
+      supabase
+        .from('room_members')
+        .update({ last_read_at: now })
+        .eq('room_id', room.id)
+        .eq('user_id', user.id),
+      supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('room_id', room.id)
+        .neq('user_id', user.id)
+        .eq('is_read', false)
+    ]);
   };
 
   const clearOldTypingIndicators = async () => {
-    if (!room) return;
+    if (!room || !user) return;
 
-    // Удаляем все старые индикаторы печати (старше 5 секунд)
     const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
     await supabase
       .from('typing_indicators')
       .delete()
       .eq('room_id', room.id)
       .lt('started_at', fiveSecondsAgo);
-    
-    // Также удаляем все индикаторы для текущего пользователя
-    if (user) {
-      await supabase
-        .from('typing_indicators')
-        .delete()
-        .eq('room_id', room.id)
-        .eq('user_id', user.id);
-    }
   };
 
   const handleTyping = async (value: string) => {
@@ -631,7 +641,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack, onDelete
                 )}
               </div>
               {room.type === 'direct' && room.partner_profile && (
-                <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#09090b] status-${room.partner_profile.status || 'offline'}`} />
+                <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#09090b] ${isOnline(room.partner_profile) ? 'status-online' : 'status-offline'}`} />
               )}
             </div>
             <div className="min-w-0 text-left">
@@ -642,7 +652,7 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack, onDelete
               </h2>
               <p className="text-xs text-emerald-400 truncate">
                 {room.type === 'direct' && room.partner_profile
-                  ? room.partner_profile.status === 'online'
+                  ? isOnline(room.partner_profile)
                     ? 'В сети'
                     : `был(а) ${formatLastSeen(room.partner_profile.last_seen)}`
                   : room.type === 'group'

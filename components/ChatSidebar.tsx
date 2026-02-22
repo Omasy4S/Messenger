@@ -1,11 +1,17 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MessageCircle, Users, LogOut, Plus, User, Search, Trash2 } from 'lucide-react';
+import { MessageCircle, Users, LogOut, Plus, User, Search } from 'lucide-react';
 import type { Profile, Room } from '@/lib/supabase';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DeleteChatModal from './DeleteChatModal';
+
+const isOnline = (profile: Profile) => {
+  if (profile.status !== 'online') return false;
+  const lastSeen = new Date(profile.last_seen).getTime();
+  return Date.now() - lastSeen < 150000;
+};
 
 interface ChatSidebarProps {
   user: Profile | null;
@@ -31,6 +37,12 @@ export default function ChatSidebar({
   onDeleteRoom,
 }: ChatSidebarProps) {
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => forceUpdate(n => n + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const formatLastSeen = (lastSeen: string) => {
     const now = new Date();
@@ -98,7 +110,7 @@ export default function ChatSidebar({
                   <User className="w-5 h-5" />
                 )}
               </div>
-              <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full status-${user?.status || 'offline'}`} />
+              <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${user?.status === 'online' ? 'status-online' : 'status-offline'}`} />
             </div>
             <div className="flex-1 min-w-0 text-left">
               <p className="font-semibold text-sm text-zinc-100 truncate">{user?.username || 'Пользователь'}</p>
@@ -195,7 +207,7 @@ export default function ChatSidebar({
                     )}
                   </div>
                   {room.type === 'direct' && room.partner_profile && (
-                    <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full status-${room.partner_profile.status || 'offline'}`} />
+                    <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ${isOnline(room.partner_profile) ? 'status-online' : 'status-offline'}`} />
                   )}
                 </div>
                 <div className="flex-1 min-w-0 pr-4">
@@ -208,7 +220,7 @@ export default function ChatSidebar({
                   </div>
                   <p className={`text-xs truncate ${isActive ? 'text-indigo-200/70' : 'text-zinc-400'}`}>
                     {room.type === 'direct' && room.partner_profile
-                      ? room.partner_profile.status === 'online'
+                      ? isOnline(room.partner_profile)
                         ? 'в сети'
                         : `был(а) ${formatLastSeen(room.partner_profile.last_seen)}`
                       : room.type === 'group'
