@@ -213,41 +213,8 @@ export default function HomePage() {
   const subscribeToRoomDeletions = () => {
     if (!user) return;
 
-    // Подписываемся на удаление пользователя из комнат
     const channel = supabase
       .channel('room-deletions')
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'room_members',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload: any) => {
-          const deletedMemberId = payload.old.id;
-          
-          setRooms(prevRooms => {
-            // Находим комнату по room_member_id
-            const roomToDelete = prevRooms.find(r => (r as any).room_member_id === deletedMemberId);
-            
-            if (roomToDelete) {
-              // Если пользователь сейчас в этом чате, показываем уведомление
-              if (selectedRoomRef.current?.id === roomToDelete.id) {
-                const roomName = roomToDelete.name || 'Группа';
-                // НЕ показываем уведомление - оно будет показано через DELETE rooms
-                // setKickedFromGroup({ name: roomName, isDissolved: false });
-                setSelectedRoom(null);
-              }
-              
-              // Удаляем комнату из списка
-              return prevRooms.filter(r => r.id !== roomToDelete.id);
-            }
-            
-            return prevRooms;
-          });
-        }
-      )
       .on(
         'postgres_changes',
         {
@@ -261,16 +228,48 @@ export default function HomePage() {
           setRooms(prevRooms => {
             const roomToDelete = prevRooms.find(r => r.id === deletedRoomId);
             
-            if (roomToDelete) {
-              // Если пользователь сейчас в этом чате, показываем уведомление о роспуске
-              if (selectedRoomRef.current?.id === deletedRoomId) {
-                const roomName = roomToDelete.name || 'Группа';
-                setKickedFromGroup({ name: roomName, isDissolved: true });
-                setSelectedRoom(null);
-              }
+            if (roomToDelete && selectedRoomRef.current?.id === deletedRoomId) {
+              const roomName = roomToDelete.name || 'Группа';
+              setKickedFromGroup({ name: roomName, isDissolved: true });
+              setSelectedRoom(null);
             }
             
             return prevRooms.filter(r => r.id !== deletedRoomId);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'room_members',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload: any) => {
+          const deletedMemberId = payload.old.id;
+          const roomId = payload.old.room_id;
+          
+          const { data: roomExists } = await supabase
+            .from('rooms')
+            .select('id')
+            .eq('id', roomId)
+            .single();
+          
+          setRooms(prevRooms => {
+            const roomToDelete = prevRooms.find(r => (r as any).room_member_id === deletedMemberId);
+            
+            if (roomToDelete) {
+              if (selectedRoomRef.current?.id === roomToDelete.id && !roomExists) {
+                const roomName = roomToDelete.name || 'Группа';
+                setKickedFromGroup({ name: roomName, isDissolved: false });
+                setSelectedRoom(null);
+              }
+              
+              return prevRooms.filter(r => r.id !== roomToDelete.id);
+            }
+            
+            return prevRooms;
           });
         }
       )

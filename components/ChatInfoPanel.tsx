@@ -453,9 +453,19 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
                   <X size={20} className="text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-red-400">Удалить чат</p>
+                  <p className="font-medium text-red-400">
+                    {room.type === 'direct' 
+                      ? 'Удалить чат'
+                      : isAdmin
+                      ? 'Удалить чат'
+                      : 'Выйти из группы'}
+                  </p>
                   <p className="text-xs text-gray-400">
-                    {canDeleteForEveryone ? 'Удалить для себя или для всех' : 'Удалить только для себя'}
+                    {room.type === 'direct'
+                      ? 'Удалить для себя или для всех'
+                      : isAdmin
+                      ? 'Удалить для себя или для всех'
+                      : 'Удалить только для себя'}
                   </p>
                 </div>
               </motion.button>
