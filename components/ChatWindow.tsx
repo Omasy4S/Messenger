@@ -277,70 +277,54 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
   const handleTyping = async (value: string) => {
     if (!room || !user) return;
 
-    // Если поле пустое, сразу удаляем индикатор
     if (!value.trim()) {
-      // Очищаем все таймеры
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
       
       if (isTypingRef.current) {
         isTypingRef.current = false;
-        try {
-          await supabase
-            .from('typing_indicators')
-            .delete()
-            .eq('room_id', room.id)
-            .eq('user_id', user.id);
-        } catch (error) {
-          // Игнорируем ошибки
-        }
+        supabase
+          .from('typing_indicators')
+          .delete()
+          .eq('room_id', room.id)
+          .eq('user_id', user.id)
+          .then(() => {});
       }
       return;
     }
 
-    // Если еще не печатаем, добавляем индикатор
     if (!isTypingRef.current) {
       isTypingRef.current = true;
       
-      try {
-        // Удаляем старый индикатор (если есть)
-        await supabase
-          .from('typing_indicators')
-          .delete()
-          .eq('room_id', room.id)
-          .eq('user_id', user.id);
-
-        // Добавляем новый
-        await supabase
-          .from('typing_indicators')
-          .insert({
-            room_id: room.id,
-            user_id: user.id,
-            started_at: new Date().toISOString(),
-          });
-      } catch (error) {
-        // Игнорируем ошибки
-      }
+      supabase
+        .from('typing_indicators')
+        .delete()
+        .eq('room_id', room.id)
+        .eq('user_id', user.id)
+        .then(() => {
+          return supabase
+            .from('typing_indicators')
+            .insert({
+              room_id: room.id,
+              user_id: user.id,
+              started_at: new Date().toISOString(),
+            });
+        });
     }
 
-    // Обновляем таймаут удаления
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Удаляем индикатор через 2 секунды бездействия
-    typingTimeoutRef.current = setTimeout(async () => {
+    typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
-      try {
-        await supabase
-          .from('typing_indicators')
-          .delete()
-          .eq('room_id', room.id)
-          .eq('user_id', user.id);
-      } catch (error) {
-        // Игнорируем ошибки
-      }
+      supabase
+        .from('typing_indicators')
+        .delete()
+        .eq('room_id', room.id)
+        .eq('user_id', user.id)
+        .then(() => {});
     }, 2000);
   };
 
@@ -348,31 +332,35 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
     e.preventDefault();
     if ((!newMessage.trim() && selectedFiles.length === 0) || !room || !user || loading) return;
 
+    const messageContent = newMessage.trim();
+    const filesToUpload = [...selectedFiles];
+    
+    setNewMessage('');
+    setSelectedFiles([]);
     setLoading(true);
     setUploadingFiles(true);
 
     try {
-      // Удаляем индикатор печати
       isTypingRef.current = false;
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
       
-      await supabase
+      supabase
         .from('typing_indicators')
         .delete()
         .eq('room_id', room.id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .then(() => {});
 
-      // Загружаем файлы, если есть
       const attachments: MessageAttachment[] = [];
       
-      if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
+      if (filesToUpload.length > 0) {
+        for (const file of filesToUpload) {
           const fileExt = file.name.split('.').pop();
           const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
           
-          const { data: uploadData, error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('message-files')
             .upload(fileName, file, {
               cacheControl: '3600',
@@ -384,7 +372,6 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
             continue;
           }
 
-          // Получаем публичный URL
           const { data: { publicUrl } } = supabase.storage
             .from('message-files')
             .getPublicUrl(fileName);
@@ -398,26 +385,21 @@ export default function ChatWindow({ user, room, onRoomUpdated, onBack }: ChatWi
         }
       }
 
-      // Отправляем сообщение
       const { error } = await supabase
         .from('messages')
         .insert({
           room_id: room.id,
           user_id: user.id,
-          content: newMessage.trim() || '',
+          content: messageContent || '',
           attachments: attachments.length > 0 ? attachments : undefined,
         });
 
       if (error) throw error;
 
-      // Обновляем время последнего обновления комнаты
       await supabase
         .from('rooms')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', room.id);
-
-      setNewMessage('');
-      setSelectedFiles([]);
     } catch (error) {
       console.error('Ошибка отправки сообщения:', error);
     } finally {

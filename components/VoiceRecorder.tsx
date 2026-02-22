@@ -14,20 +14,26 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     startRecording();
     return () => {
-      stopRecording();
       if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach(track => track.stop());
     };
   }, []);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
       });
@@ -44,13 +50,12 @@ export default function VoiceRecorder({ onSend, onCancel }: VoiceRecorderProps) 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
         setAudioBlob(blob);
-        stream.getTracks().forEach(track => track.stop());
+        streamRef.current?.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
 
-      // Таймер
       timerRef.current = setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);

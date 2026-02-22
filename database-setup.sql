@@ -70,7 +70,9 @@ CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id);
 CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_room_created ON messages(room_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_typing_indicators_room_id ON typing_indicators(room_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON profiles(status) WHERE status = 'online';
 
 -- 3. RLS ПОЛИТИКИ
 -- ============================================

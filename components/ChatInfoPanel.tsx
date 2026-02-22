@@ -219,37 +219,35 @@ export default function ChatInfoPanel({ room, currentUserId, onClose, onRoomUpda
   const loadContacts = async () => {
     setContactsLoading(true);
     try {
-      // Получаем все личные чаты пользователя
-      const { data: roomMembers, error: membersError } = await supabase
+      const { data: roomMembers } = await supabase
         .from('room_members')
         .select('room_id')
         .eq('user_id', currentUserId);
 
-      if (membersError) throw membersError;
-
       const roomIds = (roomMembers || []).map(rm => rm.room_id);
+      if (roomIds.length === 0) {
+        setContacts([]);
+        return;
+      }
 
-      // Получаем личные чаты
-      const { data: directRooms, error: roomsError } = await supabase
+      const { data: directRooms } = await supabase
         .from('rooms')
         .select('id')
         .eq('type', 'direct')
         .in('id', roomIds);
 
-      if (roomsError) throw roomsError;
-
       const directRoomIds = (directRooms || []).map(r => r.id);
+      if (directRoomIds.length === 0) {
+        setContacts([]);
+        return;
+      }
 
-      // Получаем собеседников из этих чатов
-      const { data: partners, error: partnersError } = await supabase
+      const { data: partners } = await supabase
         .from('room_members')
         .select('user_id, profiles(*)')
         .in('room_id', directRoomIds)
         .neq('user_id', currentUserId);
 
-      if (partnersError) throw partnersError;
-
-      // Извлекаем профили и фильтруем тех, кто уже в группе
       const memberIds = members.map(m => m.user_id);
       const uniqueContacts = (partners || [])
         .map(p => Array.isArray(p.profiles) ? p.profiles[0] : p.profiles)

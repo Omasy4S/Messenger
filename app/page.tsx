@@ -50,18 +50,13 @@ export default function HomePage() {
       subscribeToProfileUpdates();
       subscribeToMessages();
 
-      // Обновляем last_seen каждые 30 секунд
       const interval = setInterval(async () => {
         await supabase
           .from('profiles')
           .update({ last_seen: new Date().toISOString() })
           .eq('id', user.id);
-        
-        // Вызываем функцию для автоматической установки offline
-        await supabase.rpc('auto_set_offline_status');
       }, 30000);
 
-      // Обработчик закрытия вкладки/окна
       const handleBeforeUnload = () => {
         supabase
           .from('profiles')
@@ -74,17 +69,14 @@ export default function HomePage() {
       return () => {
         clearInterval(interval);
         window.removeEventListener('beforeunload', handleBeforeUnload);
+        supabase.channel('rooms-updates').unsubscribe();
+        supabase.channel('new-rooms').unsubscribe();
+        supabase.channel('room-deletions').unsubscribe();
+        supabase.channel('profile-updates').unsubscribe();
+        supabase.channel('messages-updates').unsubscribe();
       };
     }
-
-    return () => {
-      supabase.channel('rooms-updates').unsubscribe();
-      supabase.channel('new-rooms').unsubscribe();
-      supabase.channel('room-deletions').unsubscribe();
-      supabase.channel('profile-updates').unsubscribe();
-      supabase.channel('messages-updates').unsubscribe();
-    };
-  }, [user, rooms]);
+  }, [user?.id]);
 
   const subscribeToRoomUpdates = () => {
     if (!user) return;
@@ -99,7 +91,7 @@ export default function HomePage() {
           schema: 'public',
           table: 'rooms',
         },
-        (payload) => {
+        (payload: any) => {
           const updatedRoom = payload.new as Room;
           
           // Обновляем комнату в списке, сохраняя partner_profile и room_member_id
@@ -136,8 +128,7 @@ export default function HomePage() {
           table: 'room_members',
           filter: `user_id=eq.${user.id}`,
         },
-        async (payload) => {
-          // Получаем данные новой комнаты
+        async (payload: any) => {
           const { data: newRoom } = await supabase
             .from('rooms')
             .select('*')
@@ -207,8 +198,7 @@ export default function HomePage() {
           table: 'room_members',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          // Ищем комнату по room_member_id
+        (payload: any) => {
           const deletedMemberId = payload.old.id;
           
           setRooms(prevRooms => {
@@ -239,8 +229,7 @@ export default function HomePage() {
           schema: 'public',
           table: 'rooms',
         },
-        (payload) => {
-          // Комната полностью удалена (распущена) - показываем уведомление всем
+        (payload: any) => {
           const deletedRoomId = payload.old.id;
           
           setRooms(prevRooms => {
@@ -280,7 +269,7 @@ export default function HomePage() {
           schema: 'public',
           table: 'profiles',
         },
-        (payload) => {
+        (payload: any) => {
           // Обновляем профиль в комнатах
           setRooms(prevRooms => 
             prevRooms.map(room => {
@@ -312,7 +301,7 @@ export default function HomePage() {
           });
         }
       )
-      .subscribe((status, err) => {
+      .subscribe((status: any, err: any) => {
         if (status === 'CHANNEL_ERROR') {
           console.error('Profile subscription error, retrying...');
           setTimeout(() => {
@@ -326,7 +315,6 @@ export default function HomePage() {
   const subscribeToMessages = () => {
     if (!user) return;
 
-    // Подписываемся на новые сообщения для обновления счетчика непрочитанных
     const channel = supabase
       .channel('messages-updates')
       .on(
@@ -336,25 +324,16 @@ export default function HomePage() {
           schema: 'public',
           table: 'messages',
         },
-        async (payload) => {
+        (payload: any) => {
           const message = payload.new as Message;
           
-          // Если сообщение не от текущего пользователя
           if (message.user_id !== user.id) {
-            // Обновляем счетчик непрочитанных для этой комнаты
             setRooms(prevRooms => 
-              prevRooms.map(room => {
-                if (room.id === message.room_id) {
-                  // Если комната не выбрана, увеличиваем счетчик
-                  if (selectedRoomRef.current?.id !== room.id) {
-                    return {
-                      ...room,
-                      unread_count: (room.unread_count || 0) + 1,
-                    };
-                  }
-                }
-                return room;
-              })
+              prevRooms.map(room => 
+                room.id === message.room_id && selectedRoomRef.current?.id !== room.id
+                  ? { ...room, unread_count: (room.unread_count || 0) + 1 }
+                  : room
+              )
             );
           }
         }
@@ -416,7 +395,7 @@ export default function HomePage() {
         return;
       }
 
-      const roomIds = roomMembers.map(rm => rm.room_id);
+      const roomIds = roomMembers.map((rm: any) => rm.room_id);
 
       const { data: roomsData } = await supabase
         .from('rooms')
@@ -429,62 +408,59 @@ export default function HomePage() {
         return;
       }
 
-      // Для личных чатов загружаем информацию о собеседнике и считаем непрочитанные
-      const roomsWithPartners = await Promise.all(
-        roomsData.map(async (room) => {
-          // Находим room_member_id для этой комнаты
-          const roomMember = roomMembers.find(rm => rm.room_id === room.id);
+      const directRoomIds = roomsData.filter((r: any) => r.type === 'direct').map((r: any) => r.id);
+      
+      const { data: allMembers } = directRoomIds.length > 0 ? await supabase
+        .from('room_members')
+        .select('room_id, user_id')
+        .in('room_id', directRoomIds)
+        .neq('user_id', userId) : { data: [] };
+
+      const partnerIds = allMembers?.map((m: any) => m.user_id) || [];
+      
+      const { data: partners } = partnerIds.length > 0 ? await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', partnerIds) : { data: [] };
+
+      const partnerMap = new Map(partners?.map((p: any) => [p.id, p]));
+      const memberMap = new Map(allMembers?.map((m: any) => [m.room_id, m.user_id]));
+
+      const roomsWithData = await Promise.all(
+        roomsData.map(async (room: any) => {
+          const roomMember: any = roomMembers.find((rm: any) => rm.room_id === room.id);
           const lastReadAt = roomMember?.last_read_at || new Date(0).toISOString();
-          const roomMemberId = roomMember?.id;
           
           const { count } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
             .eq('room_id', room.id)
-            .neq('user_id', userId) // Не считаем свои сообщения
+            .neq('user_id', userId)
             .gt('created_at', lastReadAt);
 
           if (room.type === 'direct') {
-            // Находим собеседника
-            const { data: members } = await supabase
-              .from('room_members')
-              .select('user_id')
-              .eq('room_id', room.id)
-              .neq('user_id', userId);
+            const partnerId = memberMap.get(room.id);
+            const partner = partnerId ? partnerMap.get(partnerId) : null;
+            
+            if (!partner) return null;
 
-            if (members && members.length > 0) {
-              // Получаем профиль собеседника
-              const { data: partner } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', members[0].user_id)
-                .single();
-
-              if (partner) {
-                return {
-                  ...room,
-                  partner_profile: partner,
-                  unread_count: count || 0,
-                  room_member_id: roomMemberId,
-                };
-              }
-            } else {
-              // Если в личном чате нет второго участника, помечаем комнату как битую
-              return null;
-            }
+            return {
+              ...room,
+              partner_profile: partner,
+              unread_count: count || 0,
+              room_member_id: roomMember?.id,
+            };
           }
+          
           return {
             ...room,
             unread_count: count || 0,
-            room_member_id: roomMemberId,
+            room_member_id: roomMember?.id,
           };
         })
       );
 
-      // Фильтруем битые комнаты (null)
-      const validRooms = roomsWithPartners.filter(room => room !== null);
-
-      setRooms(validRooms);
+      setRooms(roomsWithData.filter((r: any) => r !== null));
     } catch (error) {
       console.error('Ошибка загрузки комнат:', error);
     }
